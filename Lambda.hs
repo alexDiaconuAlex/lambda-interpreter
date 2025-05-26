@@ -59,15 +59,18 @@ isNormalForm (App e1 e2) = (isNormalForm e1) && (isNormalForm e2) -- (e1 e2)
 -- 1.5.
 
 helperReduce :: String -> String -> Lambda -> Lambda
-helperReduce old a (App (Var x) (Var y)) = if (old == x && old == y) then (App (Var a) (Var a))
-                            else if (old == x) then (App (Var a) (Var x))
-                            else if (old == y) then (App (Var x) (Var a))
-                            else (App (Var x) (Var y))
-helperReduce old a (Abs y e1) = (Abs a (helperReduce old a e1))
-helperReduce old a (App e1 e2) = App(helperReduce old a e1) (helperReduce old a e2)
+helperReduce old a (App (Var x) (Var y)) = 
+  if (old == x && old == y) then (App (Var a) (Var a))
+  else if (old == x) then (App (Var a) (Var y))
+  else if (old == y) then (App (Var x) (Var a))
+  else (App (Var x) (Var y))
+helperReduce old a (Abs y e1) =
+  (Abs a (helperReduce old a e1))
+helperReduce old a (App e1 e2) =
+  App(helperReduce old a e1) (helperReduce old a e2)
 
--- helperReduce a (Var x) = if (a == x) then (Var a)
---                           else (Var x)
+helperReduce old a (Var x) = if (old == x) then (Var a)
+                          else (Var x)
 
 reduce :: String -> Lambda -> Lambda -> Lambda
 reduce x (Var y) e = if (x == y) then e
@@ -85,39 +88,30 @@ reduce x (Abs y e1) e = if (x == y) then (Abs y e1)
 normalStep :: Lambda -> Lambda
 normalStep (Var x) = (Var x)
 normalStep (App(Abs x e1) e2) = (reduce x e1 e2)
--- normalStep (App(App(Abs x e1) p1) (App(Abs y e2) p2)) =
---   App(reduce x e1 p1) (App(Abs y e2) p2)
 normalStep (App(App(Abs x e1) p1) e2) =
   App(reduce x e1 p1) e2
 
--- normalStep Abs(a App(App(Abs x e1) p1) (App(Abs y e2) p2)) = 
---   Abs(a App(reduce x e1 p1) (App(Abs y e2) p2))
-
+-- \a.(\x.e1 e2) -> 
 normalStep (Abs a (App (Abs x e1) e2)) =
   Abs a (reduce x e1 e2)
 
 -- 1.7.
-applicativeStep :: Lambda -> Lambda -- if e2 is in 
-applicativeStep (Var x) = (Var x)
--- applicativeStep (Abs x e) = (Abs x e)
--- applicativeStep (App (Abs x e1) e2) = (reduce x e1 e2)
+applicativeStep :: Lambda -> Lambda
+applicativeStep (Var x) = Var x
+applicativeStep (Abs x e) = Abs x (applicativeStep e)
 
--- applicativeStep (App (Abs x e1) e2) =
---   if isNormalForm e2
---     then reduce x e1 e2
---     else App (Abs x e1) (applicativeStep e2)
+applicativeStep (App (Abs x e1) e2) =
+  if (not (isNormalForm e2)) then App (Abs x e1) (applicativeStep e2)
+  else reduce x e1 e2
 
 applicativeStep (App e1 e2) =
-  if (not (isNormalForm e2)) then (App e1 (applicativeStep e2))
-  else App (applicativeStep e1) e2
+  if (not (isNormalForm e1)) then (App (applicativeStep e1) e2)
+  else (App e1 (applicativeStep e2))
 
-applicativeStep (App (Abs x e1) e2) = if (isNormalForm e2) then (reduce x e1 e2)
-                                      else (App (Abs x e1) (applicativeStep e2))
-
--- applicativeStep Abs(x e)
 -- 1.8.
 simplify :: (Lambda -> Lambda) -> Lambda -> [Lambda]
-simplify = undefined
+simplify function e = if (isNormalForm e) then [e]
+                      else e : simplify function (function e)
 
 normal :: Lambda -> [Lambda]
 normal = simplify normalStep
