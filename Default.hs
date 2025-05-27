@@ -12,6 +12,8 @@ vg = Var "g"
 vh = Var "h"
 vm = Var "m"
 vn = Var "n"
+vu = Var "u"
+vv = Var "v"
 
 -- Basic combinators
 m = Abs "x" $ App vx vx -- \x.(x x)
@@ -23,27 +25,28 @@ y = Abs "f" $ App fix fix -- \f.(\x.(f (x x))    \x.(f (x x)))
   where fix = Abs "x" $ App vf (App vx vx) -- \x.(f (x x))
 
 -- 4.1. Boolean encodings
-bTrue = undefined
-bFalse = undefined
-bAnd = undefined
-bOr = undefined
-bNot = undefined
-bXor = undefined
+bTrue = (Abs "x" (Abs "y" vx))
+bFalse = (Abs "x" (Abs "y" vy))
+bAnd = (Abs "x" (Abs "y" (App (App vx vy) vx)))
+bOr = (Abs "x" (Abs "y" (App (App vx vx) vy)))
+bNot = (Abs "x" (App (App vx bFalse) bTrue))
+bXor = (Abs "x" (Abs "y" (App (App vx (App bNot vy)) vy)))
 
 -- 4.2. Pair encodings
-pair = undefined
-first = undefined
-second = undefined
+pair = (Abs "x" (Abs "y" (Abs "z" (App (App vz vx) vy))))
+first = (Abs "x" (App vx bTrue))
+second = (Abs "x" (App vx bFalse))
 
 -- 4.3. Natural number encodings
-n0 = undefined
-n1 = undefined
-n2 = undefined
-nSucc = undefined
-nPred = undefined
-nAdd = undefined
-nSub = undefined
-nMult = undefined
+n0 = (Abs "f" (Abs "x" vx))
+n1 = (Abs "f" (Abs "x" (App vf vx)))
+n2 = (Abs "f" ((Abs "x" (App vf (App vf vx)))))
+nSucc = (Abs "n" (Abs "f" (Abs "x" (App vf (App (App vn vf) vx)))))
+nPred = (Abs "n" (Abs "f" (Abs "x" (App (App (App vn (Abs "g" (Abs "h" (App vh (App vg vf))))) (Abs "u" vx)) (Abs "v" vv)))))
+nAdd = (Abs "n" (Abs "m" (Abs "f" (Abs "x" (App (App vn vf) (App (App vm vf) vx) )))))
+nSub = (Abs "m" (Abs "n" (App (App vn nPred) vm)))
+nMult = (Abs "m" (Abs "n" (Abs "f" (App vm (App vn vf)))))
+-- nMult = undefined
 
 -- Default Cont t
 defaultContext :: Context

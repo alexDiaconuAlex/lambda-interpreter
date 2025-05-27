@@ -82,10 +82,10 @@ reduceTest = do
         e1 = Abs "y" (App vx vy)
         e2 = Abs "x" vy
 
-expr1 = App (App k vx) (App ki vy) -- ((\x.\y.x  x) (\x.\y.y y))
-normalAns1 = [ expr1
-             , App (Abs "y" vx) (App ki vy)
-             , vx
+expr1 = App (App k vx) (App ki vy) -- ((\x.\y.x  x) (\x.\y.y  y))
+normalAns1 = [ expr1 -- ((\x.\y.x  x) (\x.\y.y  y))
+             , App (Abs "y" vx) (App ki vy) -- (\y.x (\x.\y.y  y))
+             , vx -- x
              ]
 applicativeAns1 = [ expr1 -- ((\x.\y.x  x) (\x.\y.y y))
                   , App (Abs "y" vx) (App ki vy) -- (\y.x (\x.\y.y y))
@@ -115,17 +115,28 @@ applicativeStepTest = do
     assert_eq "applicativeStep variable" 1 (applicativeStep vx) vx -- \x = \x
     assert_eq "applicativeStep reduction" 1 (applicativeStep $ App m vx) (App vx vx) -- (\x.(x x) x) -> (x x)
     assert_eq "applicativeStep complex" 2 (applicativeStep expr) expr -- linia 122: if e2 poate fi redusa, o reducem. altfel, reducem e1
-    assert_eq "applicativeStep 1 step" 2 (applicativeStep expr1) (applicativeAns1 !! 1) -- ((\x.\y.x x) (\x.\y.y y)) -> (\y.x (\x.\y.y y))
+      -- expr -> -- (\x.y (\x.(x x) \x.(x x)))
+    assert_eq "applicativeStep 1 step" 2 (applicativeStep expr1) (applicativeAns1 !! 1) 
+    -- ((\x.\y.x x) (\x.\y.y y)) -> (\y.x (\x.\y.y y))
     assert_eq "applicativeStep 2 steps" 2 (applicativeStep $ applicativeStep expr1) (applicativeAns1 !! 2)
     assert_eq "applicativeStep 3 steps" 2 (applicativeStep $ applicativeStep $ applicativeStep expr1) (applicativeAns1 !! 3)
   where
-    expr = App (Abs "x" vy) (App m m) -- (\x.y (\x.(x x) \x.(x x))) --> \x.y e1 e2
+    expr = App (Abs "x" vy) (App m m) -- (\x.y (\x.(x x) \x.(x x))) --> (\x.y (e1 e2))
+
+    -- pt: x = x
+    -- pt: \x.e = \x.(applicativeStep e)
+    -- pt: (\x.e1 e2) = if (not (isNormalForm e2)) then App (\x.e1) (applicativeStep e2)
+    --                  else reduce x e1 e2
+
+    -- pt: (e1 e2) = if (not (isNormalForm e1)) then (App (applicativeStep e1) e2)
+    --              else (App e1 (applicativeStep e2))
 
 simplifyTest :: TestCase Bool
 simplifyTest = do
     section "===== 1.8. simplify tests ====="
     assert_eq "simplify normalForm" 1 (simplify id c) [c]
     assert_eq "simplify normal order" 2 (simplify normalStep expr1) normalAns1
+     -- expr -> ((\x.\y.x  x) (\x.\y.y y))
     assert_eq "simplify applicative order" 2 (simplify applicativeStep expr1) applicativeAns1
 
 lambdaTests :: IO (Int, Int)

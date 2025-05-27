@@ -91,9 +91,15 @@ normalStep (App(Abs x e1) e2) = (reduce x e1 e2)
 normalStep (App(App(Abs x e1) p1) e2) =
   App(reduce x e1 p1) e2
 
--- \a.(\x.e1 e2) -> 
+-- \a.(\x.e1 e2) -> w
 normalStep (Abs a (App (Abs x e1) e2)) =
   Abs a (reduce x e1 e2)
+
+-- + (pt simplifyCtx)
+normalStep (App e1 e2) =
+  if (not (isNormalForm e1)) then (App (normalStep e1) e2)
+  else (App e1 (normalStep e2))
+normalStep (Abs x e1) = (Abs x (normalStep e1))
 
 -- 1.7.
 applicativeStep :: Lambda -> Lambda
@@ -110,8 +116,8 @@ applicativeStep (App e1 e2) =
 
 -- 1.8.
 simplify :: (Lambda -> Lambda) -> Lambda -> [Lambda]
-simplify function e = if (isNormalForm e) then [e]
-                      else e : simplify function (function e)
+simplify stepType e = if (isNormalForm e) then [e]
+                      else e : simplify stepType (stepType e)
 
 normal :: Lambda -> [Lambda]
 normal = simplify normalStep
